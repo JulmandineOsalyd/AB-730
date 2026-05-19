@@ -211,6 +211,7 @@ function render(){
         <span class="score">✓ ${score} pts</span>
         <button class="${shuffleCls}" onclick="toggleShuffle()">${shuffleTxt}</button>
         <button class="history-btn" onclick="saveProgress()" title="Sauvegarder la progression">${saveStatus==='saving'?'⏳':saveStatus==='ok-progress'?'✓ Sauvé':saveStatus==='ko'?'⚠ Erreur':'💾 Sauver'}</button>
+        <button class="history-btn" onclick="newSession()" title="Démarrer une nouvelle session">🆕 Nouveau</button>
         <button class="history-btn" onclick="openHistory()">📊 Historique</button>
       </div>
     </div>
@@ -357,12 +358,18 @@ function renderHistory(app){
       const cls=pct>=80?'good':pct>=60?'mid':'bad';
       const dur=s.duration_seconds?Math.round(s.duration_seconds/60)+' min':'—';
       const mode=s.shuffle?'🔀 Aléatoire':'🔢 Ordre';
+      const inProgress=s.status==='in_progress';
+      const statusBadge=inProgress?'<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-left:6px">EN COURS</span>':'';
+      const resumeBtn=inProgress&&s.session_id?`<button class="history-btn" style="margin-left:8px;background:#2563eb;color:#fff" onclick="resumeSessionFromHistory('${s.session_id}')">▶ Reprendre</button>`:'';
       return `<div class="history-item">
-        <div>
-          <div class="history-date">${dateStr}</div>
-          <div class="history-meta">${s.score}/${s.total} · ${dur} · ${mode}</div>
+        <div style="flex:1;min-width:0">
+          <div class="history-date">${dateStr}${statusBadge}</div>
+          <div class="history-meta">${s.score}/${s.total} · question ${(s.current_index||0)+1} · ${dur} · ${mode}</div>
         </div>
-        <div class="history-score ${cls}">${pct}%</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <div class="history-score ${cls}">${pct}%</div>
+          ${resumeBtn}
+        </div>
       </div>`;
     }).join('')+'</div>';
   }
@@ -401,6 +408,43 @@ function restart(){
   order=shuffle?shuffleArr(questions.map((_,i)=>i)):questions.map((_,i)=>i);
   cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
   sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+  render();
+}
+
+function newSession(){
+  if(!confirm('Démarrer une nouvelle session ? La progression non sauvegardée sera perdue.'))return;
+  restart();
+}
+
+async function resumeSessionFromHistory(sid){
+  showHistory=false;
+  booting=true;
+  render();
+  try{
+    const{data,error}=await sb.from('quiz_sessions').select('*').eq('session_id',sid).maybeSingle();
+    if(error)throw error;
+    if(!data){alert('Session introuvable');booting=false;render();return;}
+    sessionId=sid;
+    localStorage.setItem(SESSION_KEY,sessionId);
+    shuffle=!!data.shuffle;
+    if(data.order_snapshot&&Array.isArray(data.order_snapshot))order=data.order_snapshot;
+    else order=questions.map((_,i)=>i);
+    cur=data.current_index||0;
+    score=data.score||0;
+    results=[];
+    if(Array.isArray(data.results)){
+      data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans};});
+    }
+    sel=results[cur]?[...results[cur].sel]:[];
+    submitted=!!results[cur];
+    done=data.status==='completed';
+    saveStatus='';
+    startTime=Date.now();
+  }catch(e){
+    console.error('Resume error',e);
+    alert('Erreur de chargement de la session');
+  }
+  booting=false;
   render();
 }
 

@@ -4,53 +4,56 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Quiz Microsoft 365 Copilot – AB-730</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#f0f4ff,#e8f0fe);min-height:100vh;padding:16px}
-  .container{max-width:640px;margin:0 auto}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:linear-gradient(135deg,#f0f4ff,#e8f0fe);min-height:100vh;padding:16px;font-size:16px}
+  .container{max-width:720px;margin:0 auto}
   .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
-  .header-title{font-size:13px;font-weight:600;color:#64748b}
-  .badge{background:#2563eb;color:#fff;font-size:13px;font-weight:700;padding:4px 12px;border-radius:999px}
+  .header-title{font-size:15px;font-weight:600;color:#64748b}
+  .badge{background:#2563eb;color:#fff;font-size:15px;font-weight:700;padding:5px 14px;border-radius:999px}
   .header-right{display:flex;align-items:center;gap:8px}
-  .score{font-size:13px;font-weight:600;color:#16a34a}
-  .shuffle-btn{font-size:11px;padding:4px 10px;border-radius:999px;font-weight:700;border:none;cursor:pointer;transition:all .2s}
+  .score{font-size:15px;font-weight:600;color:#16a34a}
+  .shuffle-btn{font-size:13px;padding:5px 12px;border-radius:999px;font-weight:700;border:none;cursor:pointer;transition:all .2s}
   .shuffle-on{background:#f97316;color:#fff}
   .shuffle-off{background:#e2e8f0;color:#475569}
   .progress-bar{background:#e2e8f0;border-radius:999px;height:6px;margin-bottom:16px}
   .progress-fill{background:#2563eb;height:6px;border-radius:999px;transition:width .3s}
   .card{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,.08);overflow:hidden}
-  .card-header{background:linear-gradient(90deg,#2563eb,#1d4ed8);padding:18px 20px}
-  .card-type{font-size:11px;color:#bfdbfe;margin-bottom:6px}
-  .card-q{color:#fff;font-size:14px;font-weight:500;line-height:1.6;white-space:pre-line}
-  .opts{padding:16px 16px 0}
-  .opt{width:100%;text-align:left;border:2px solid #e2e8f0;border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;background:#fff;cursor:pointer;transition:all .2s;margin-bottom:10px;font-size:13px;color:#1e293b;line-height:1.5}
+  .card-header{background:linear-gradient(90deg,#2563eb,#1d4ed8);padding:20px 22px}
+  .card-type{font-size:13px;color:#bfdbfe;margin-bottom:8px}
+  .card-q{color:#fff;font-size:17px;font-weight:500;line-height:1.6;white-space:pre-line}
+  .opts{padding:18px 18px 0}
+  .opt{width:100%;text-align:left;border:2px solid #e2e8f0;border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start;background:#fff;cursor:pointer;transition:all .2s;margin-bottom:10px;font-size:15px;color:#1e293b;line-height:1.5}
   .opt:hover{border-color:#93c5fd;background:#eff6ff}
   .opt.selected{border-color:#2563eb;background:#eff6ff;color:#1e3a8a}
   .opt.correct{border-color:#16a34a;background:#f0fdf4;color:#14532d}
   .opt.wrong{border-color:#dc2626;background:#fef2f2;color:#7f1d1d}
   .opt.missed{border-color:#16a34a;background:#f0fdf4;color:#14532d}
-  .key{font-weight:800;font-size:11px;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#f1f5f9;color:#64748b;margin-top:1px}
+  .key{font-weight:800;font-size:13px;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:#f1f5f9;color:#64748b;margin-top:1px}
   .key.sel{background:#2563eb;color:#fff}
   .key.ok{background:#16a34a;color:#fff}
   .key.ko{background:#dc2626;color:#fff}
   .opt-text{flex:1}
-  .opt-icon{flex-shrink:0;font-size:14px;margin-top:1px}
-  .exp-box{margin:0 16px 16px;border-radius:14px;padding:14px}
+  .opt-icon{flex-shrink:0;font-size:16px;margin-top:1px}
+  .exp-box{margin:0 18px 18px;border-radius:14px;padding:16px}
   .exp-box.ok{background:#f0fdf4;border:1.5px solid #86efac}
   .exp-box.ko{background:#fffbeb;border:1.5px solid #fcd34d}
-  .exp-title{font-weight:700;font-size:13px;margin-bottom:6px}
+  .exp-title{font-weight:700;font-size:15px;margin-bottom:8px}
   .exp-title.ok{color:#15803d}
   .exp-title.ko{color:#b45309}
-  .exp-text{font-size:12px;color:#374151;line-height:1.6}
-  .actions{padding:0 16px 16px;display:flex;gap:10px}
-  .btn{flex:1;border:none;border-radius:14px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s}
+  .exp-text{font-size:14px;color:#374151;line-height:1.6}
+  .actions{padding:0 18px 18px;display:flex;gap:10px}
+  .btn{flex:1;border:none;border-radius:14px;padding:14px;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s}
   .btn-prev{background:#f1f5f9;color:#475569;border:2px solid #e2e8f0}
   .btn-prev:disabled{opacity:.3;cursor:default}
   .btn-submit{background:#2563eb;color:#fff}
   .btn-submit:disabled{opacity:.4;cursor:default}
   .btn-next{background:#2563eb;color:#fff}
-  .dots{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin-top:14px}
-  .dot{width:11px;height:11px;border-radius:50%}
+  .dots{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px}
+  .dot{width:13px;height:13px;border-radius:50%;border:none;padding:0;cursor:pointer;transition:transform .15s}
+  .dot:hover{transform:scale(1.4)}
+  .dot-current{outline:2px solid #2563eb;outline-offset:2px}
   .dot-ok{background:#4ade80}
   .dot-ko{background:#f87171}
   .dot-done{background:#cbd5e1}
@@ -67,6 +70,24 @@
   .done-cell-val{font-size:24px;font-weight:800}
   .done-cell-lbl{font-size:11px;color:#94a3b8;margin-top:2px}
   .btn-restart{width:100%;background:#2563eb;color:#fff;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:700;cursor:pointer}
+  .history-btn{font-size:13px;padding:5px 12px;border-radius:999px;font-weight:700;border:none;cursor:pointer;background:#e2e8f0;color:#475569;transition:all .2s}
+  .history-btn:hover{background:#cbd5e1}
+  .save-status{font-size:13px;color:#64748b;text-align:center;margin-top:8px;min-height:16px}
+  .save-status.ok{color:#16a34a}
+  .save-status.ko{color:#dc2626}
+  .history{background:#fff;border-radius:20px;box-shadow:0 4px 24px rgba(0,0,0,.08);padding:24px;margin-top:16px}
+  .history-title{font-size:20px;font-weight:800;color:#1e293b;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+  .history-empty{text-align:center;padding:32px 16px;color:#94a3b8;font-size:15px}
+  .history-list{display:flex;flex-direction:column;gap:10px}
+  .history-item{background:#f8fafc;border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .history-date{font-size:14px;color:#64748b}
+  .history-meta{font-size:13px;color:#94a3b8;margin-top:2px}
+  .history-score{font-size:22px;font-weight:800;color:#2563eb;flex-shrink:0}
+  .history-score.bad{color:#dc2626}
+  .history-score.mid{color:#f59e0b}
+  .history-score.good{color:#16a34a}
+  .btn-back{width:100%;background:#2563eb;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px}
+  .history-loading{text-align:center;padding:24px;color:#94a3b8;font-size:15px}
 </style>
 </head>
 <body>
@@ -74,9 +95,18 @@
 <script>
 const questions=[{q:"You are using Microsoft 365 Copilot to enhance your productivity in Microsoft Excel. Which two tasks can you achieve by using Copilot in Excel?",opts:["A. Customize the conditional formatting rules for your data.","B. Insert a custom chart that has specific formatting.","C. Generate a summary of key insights from your data.","D. Build a pivot table based on your data."],ans:["C","D"],multi:true,exp:"Copilot in Excel can analyze datasets and generate insights [C], and instantly generate pivot tables [D]. Customizing conditional formatting or inserting custom charts with specific formatting are not core Copilot AI capabilities."},{q:"You are using Microsoft 365 Copilot to enhance your productivity in Microsoft Word. Which two tasks can you achieve by using Copilot in Word?",opts:["A. Insert a table of contents based on the headings in your document.","B. Customize the page margins to match your company's document standards.","C. Generate a summary of the key points in your document.","D. Insert a custom watermark that has specific text and formatting."],ans:["C","D"],multi:true,exp:"Copilot in Word can summarize long documents [C] and add formatting/visuals like watermarks [D]. Inserting a table of contents is a standard Word feature. Customizing margins is a manual task."},{q:"You are using Microsoft 365 Copilot to enhance your productivity in Microsoft Outlook. Which two tasks can you achieve by using Copilot in Outlook?",opts:["A. Insert a custom HTML signature that has specific formatting.","B. Generate a draft response to an email based on the context of the conversation.","C. Create a summary of unread emails in your inbox.","D. Customize the folder structure to organize your emails."],ans:["B","C"],multi:true,exp:"Copilot in Outlook generates context-aware email drafts [B] and summarizes unread emails and threads [C]. HTML signatures and folder structure are standard Outlook features."},{q:"You have a Microsoft 365 Copilot license. You are preparing a business presentation by using Copilot in PowerPoint. Which two tasks can you achieve?",opts:["A. Insert a custom animation for a specific object on a slide.","B. Create a slide layout based on the content of your presentation.","C. Customize the design theme of your presentation to match your company's branding.","D. Produce a summary slide based on the key points in your presentation."],ans:["B","D"],multi:true,exp:"Copilot can automatically create slide layouts [B] and generate a summary slide [D]. Custom animations require manual setup. Copilot cannot create a brand-new design theme from scratch."},{q:"You are using Microsoft 365 Copilot to enhance your productivity in Microsoft Teams. Which two tasks can you achieve?",opts:["A. Mute and unmute participants in a meeting based on their location.","B. Create a custom background and add the background to your video calls.","C. Create a meeting summary, including key decisions and action items.","D. Draft a response to a channel message based on the context of the conversation."],ans:["C","D"],multi:true,exp:"Copilot in Teams generates meeting summaries with decisions and action items [C], and drafts channel message responses using conversation context [D]."},{q:"A colleague from another company shares a link to a prompt. When you select the link, you receive: 'Prompt not found.' What is a possible cause?",opts:["A. The prompt is outdated.","B. The prompt is outside of your organization.","C. The prompt contains a reference to a file that you do NOT have access to.","D. The prompt is a scheduled prompt.","E. The prompt contains a file that has a sensitivity label applied."],ans:["C"],multi:false,exp:"The 'Prompt not found' error typically occurs when the prompt references a file the user cannot access, cross-tenant restrictions prevent validation, or the user lacks a qualifying Copilot license."},{q:"You run a saved prompt and receive: 'The file appears to be either empty, corrupted, or in a format that I cannot process.' What is a possible cause?",opts:["A. You did NOT schedule the prompt to run.","B. You ran the prompt from a web app instead of a desktop app.","C. You used the wrong agent to run the prompt.","D. You do NOT have access to the file."],ans:["D"],multi:false,exp:"This error typically occurs when Copilot cannot access the file due to missing Read permissions, sync issues, or a Sensitivity Label blocking extraction."},{q:"You receive images from a colleague suspected to be AI-generated by Microsoft 365 Copilot. What can you use to verify?",opts:["A. File names","B. Watermarks","C. Content credentials","D. File descriptions"],ans:["C"],multi:false,exp:"Microsoft uses the C2PA standard to attach cryptographically signed metadata (content credentials) to AI-generated images, verifiable via content credential verification sites."},{q:"A merchandiser places a large order based solely on Copilot's product suggestions without reviewing them. What is this an example of?",opts:["A. Verification","B. Overreliance","C. Fabrication","D. Prompt injection"],ans:["B"],multi:false,exp:"Overreliance occurs when users uncritically accept AI outputs without sufficient human oversight. Copilot should be used as an assistive tool, not a sole decision-maker."},{q:"You are comparing Microsoft 365 Copilot and Microsoft 365 Copilot Chat. What is available in both versions?",opts:["A. The Researcher agent","B. Copilot Pages","C. Copilot Notebooks"],ans:["B"],multi:false,exp:"Copilot Pages — turning AI responses into editable shareable documents — is available in both. The Researcher agent and Copilot Notebooks require the full M365 Copilot license."},{q:"A colleague asks which data Copilot uses when using the Work scope. What should you tell your colleague?",opts:["A. Copilot provides responses based only on data that the user can access and the general knowledge that Copilot was trained on.","B. Copilot provides responses based on all the data in your organization's Microsoft 365 environment and the general knowledge Copilot was trained on.","C. Copilot provides responses based only on data that the user can access.","D. Copilot provides responses based only on the general knowledge that Copilot was trained on."],ans:["A"],multi:false,exp:"In Work scope, Copilot uses RAG via Microsoft Graph to access data the user is authorized to view. It also falls back on LLM training knowledge for broader questions."},{q:"For each statement, select Yes or No:\n1. Copilot can surface data from Microsoft Teams chats.\n2. Copilot can schedule, draft, AND send emails based on certain conditions.\n3. Copilot can summarize, draft, and answer questions about Teams meetings content.",opts:["A. Yes / No / Yes","B. Yes / Yes / Yes","C. No / Yes / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"[1] Yes: Copilot can surface Teams chat data. [2] No: Copilot drafts/schedules but does NOT send emails automatically — user approval required. [3] Yes: Copilot can summarize meeting content (requires transcription)."},{q:"For each statement, select Yes or No:\n1. Microsoft 365 Copilot is trained on your organization's business data.\n2. Copilot can summarize emails in mailboxes shared with you.\n3. Copilot leverages the Microsoft 365 security framework to provide access to enterprise data.",opts:["A. No / Yes / Yes","B. Yes / Yes / Yes","C. No / No / Yes","D. Yes / No / No"],ans:["A"],multi:false,exp:"[1] No: Copilot uses 'grounding', not traditional training, on org data. [2] Yes: Copilot can summarize shared/delegated mailboxes with read access. [3] Yes: Copilot inherits existing M365 security and permission policies."},{q:"For each statement, select Yes or No:\n1. You can delete your conversation history only if your administrator allows you to.\n2. When you delete a conversation, associated SharePoint files are also deleted.\n3. When you uninstall a Copilot agent, all associated conversations are retained.",opts:["A. No / No / Yes","B. Yes / Yes / Yes","C. No / Yes / No","D. Yes / No / Yes"],ans:["A"],multi:false,exp:"[1] No: Users can delete their own history via privacy dashboard. [2] No: Deleting chat history removes logs but NOT SharePoint/OneDrive files. [3] Yes: Conversations are retained for 18 months by default, even after agent uninstallation."},{q:"For each statement, select Yes or No:\n1. Copilot uses your business data to train underlying AI models.\n2. Copilot automatically assigns permissions to resources for easier discovery.\n3. Copilot uses the same data access controls as other Microsoft 365 services.",opts:["A. No / No / Yes","B. Yes / Yes / Yes","C. Yes / No / Yes","D. No / Yes / No"],ans:["A"],multi:false,exp:"[1] No: Customer data is NEVER used to train foundation LLMs. [2] No: Copilot does NOT change or create permissions. [3] Yes: Copilot inherits SharePoint, OneDrive, and Entra permissions."},{q:"For each statement, select Yes or No:\n1. Prompt injection can cause data exposure and unintended system behavior.\n2. Prompt injection can be used to embed malicious or harmful instructions.\n3. Prompt injection is a security vulnerability unique to generative AI systems.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / No","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. Prompt injection turns natural language into a vehicle for malicious commands. In M365 Copilot, indirect prompt injection via documents/emails can override safe behavior. It is unique to AI systems interpreting natural language."},{q:"For each statement (no M365 Copilot license), select Yes or No:\n1. Copilot Chat lets you upload documents from your local computer.\n2. Copilot Chat is included with Microsoft 365 Business Standard.\n3. Copilot Chat lets you create agents that can access SharePoint folders.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Local file uploads for analysis are supported. [2] Copilot Chat is included at no extra cost with M365 Business Standard. [3] Agents accessing SharePoint are possible via pay-as-you-go billing."},{q:"You open Microsoft 365 Copilot and notice a green dot next to the 'Standings' conversation. What can you infer?",opts:["A. The conversation contains only anonymous data.","B. The conversation contains a verified response.","C. The conversation was added to a notebook.","D. The conversation contains a scheduled prompt.","E. The conversation was shared."],ans:["A"],multi:false,exp:"The green shield/dot indicates Enterprise Data Protection (EDP) is active — chats and prompts are protected and not used to train AI models. It signifies the user is logged in with a work or school account."},{q:"'_______ in Microsoft 365 Copilot ensures that business data stays within a Microsoft 365 tenant and is NOT used to train AI models.'",opts:["A. The Common Data Model","B. Enterprise data protection (EDP)","C. Sensitivity labels","D. Zero Trust"],ans:["B"],multi:false,exp:"EDP ensures no AI training on customer data, tenant isolation, permission inheritance, compliance with GDPR/ISO standards, and secure web query de-identification when using Bing grounding."},{q:"From the My Account portal, if you select Delete history for the Copilot activity history, you can delete _______.",opts:["A. A specific conversation.","B. A specific date range of activity.","C. All the Microsoft 365 Copilot activity.","D. All conversations with a specific agent."],ans:["C"],multi:false,exp:"Selecting 'Delete history' performs a bulk deletion of ALL Copilot activity across the entire M365 ecosystem. You cannot selectively delete by app, date range, or agent."},{q:"If you start a temporary chat in Microsoft 365 Copilot, and then start a new chat, all the prompts and responses from the temporary chat will be _______.",opts:["A. Deleted immediately.","B. Deleted after one hour.","C. Moved to a private notebook.","D. Moved to your Microsoft OneDrive."],ans:["A"],multi:false,exp:"The Temporary Chat feature immediately discards all prompts and responses once the session ends or a new chat is initiated. No data is stored in history — ideal for sensitive inquiries."},{q:"You use Copilot to generate a training plan. You need to check if similar plans exist in your organization. What should you use in Copilot?",opts:["A. Search","B. Designer","C. Apps","D. Pages"],ans:["A"],multi:false,exp:"Use Copilot Chat in Work mode (Search) to perform a cross-tenant search across SharePoint, OneDrive, and Teams for similar training plans."},{q:"You use the Researcher agent to generate a report. What can you use to verify whether the report was generated using valid sources?",opts:["A. Citations","B. Instructions","C. Memory","D. Capabilities"],ans:["A"],multi:false,exp:"The Researcher agent provides numbered citations. Click them to view source previews and access full source links to verify accuracy. 'See More' shows the full source list."},{q:"Overreliance is a common risk associated with generative AI, where _______.",opts:["A. Users exploit vulnerabilities to elicit unauthorized behavior.","B. The model is tricked into exposing confidential information.","C. The model generates misleading, inaccurate, or irrelevant content.","D. Users accept the AI-generated output without verifying its accuracy."],ans:["D"],multi:false,exp:"Overreliance occurs when users uncritically accept AI outputs as accurate, often due to automation bias. This leads to propagation of false information, legal failures, and erosion of critical thinking."},{q:"You ask Copilot to create a report from the web. You discover some information is fictional. What is this an example of?",opts:["A. Deepfake","B. Fabrication","C. Overreliance","D. Prompt injection","E. Bias"],ans:["B"],multi:false,exp:"Fabrication (hallucination) occurs when the AI generates content not grounded in real-world facts. The model fills gaps with invented data. Deepfakes are manipulated media; bias involves skewed outputs."},{q:"For each statement, select Yes or No:\n1. Agents you create are shared automatically with your organization.\n2. You can interact with a created agent using Microsoft Teams.\n3. A user you share an agent with can modify the agent instructions.",opts:["A. No / Yes / No","B. Yes / Yes / Yes","C. No / No / Yes","D. Yes / No / No"],ans:["A"],multi:false,exp:"[1] No: Created agents are private by default — you must manually share them. [2] Yes: Agents can be published and accessed in Teams via @mention. [3] No: Standard sharing is read-only. Editor permissions must be granted explicitly."},{q:"You planned a trip using Copilot memory. You cancel the trip. How do you ensure Copilot forgets the details?",opts:["A. From the My Account portal, delete the Copilot activity history.","B. From Copilot, delete memories.","C. From Copilot, delete custom instructions.","D. From Copilot, delete all the conversation about the trip."],ans:["B"],multi:false,exp:"Go to Copilot Settings > Personalization > Saved memories > Manage saved memories, then delete individual trip-related items. You can also prompt Copilot to forget specific information."},{q:"You need to evaluate key spending and performance trends to understand which marketing channels deliver the best ROI. What should you use in Microsoft 365 Copilot?",opts:["A. The Analyst agent","B. Chat","C. The Researcher agent","D. A notebook"],ans:["A"],multi:false,exp:"The Analyst agent functions as a 'virtual data scientist'. It evaluates spending/performance trends, performs multi-step calculations, and identifies patterns — ideal for ROI analysis."},{q:"You have several Copilot pages about a new product. You need to simplify having many different Copilot conversations about them. What should you do first?",opts:["A. Create a story.","B. Add the pages to a notebook.","C. Add the pages to a conversation.","D. Download the pages locally."],ans:["B"],multi:false,exp:"Copilot Notebooks support up to 100 shared references and retain context across all files and chat history, enabling seamless cross-material conversations about your research."},{q:"You are creating a custom analytics agent using Excel files. You need the agent to create visualizations, perform math operations, and analyze data. What should you add?",opts:["A. A suggested prompt","B. Code interpreter","C. Image generator","D. A template"],ans:["A"],multi:false,exp:"A well-crafted suggested prompt guides the agent to perform visualizations, math operations, and aggregations on Excel data, specifying the goal, source data, and desired output format."},{q:"You add Process.docx from a LOCAL folder to a notebook. You updated the local file yesterday. What will occur when you chat in the notebook?",opts:["A. The chat will reference the most recent version of Process.docx.","B. The chat will reference both versions of Process.docx.","C. The chat will reference only the original version of Process.docx."],ans:["C"],multi:false,exp:"Uploading a local file creates a snapshot in OneDrive at the time of upload. Local changes afterward are NOT reflected. Re-upload the file to use the updated version."},{q:"You have several separate Copilot conversations. You need to gather them so they can find each other and share reference material. What is the best solution?",opts:["A. A notebook","B. An agent","C. An app","D. A page"],ans:["A"],multi:false,exp:"Copilot Notebooks are AI-powered project workspaces that gather multiple conversations, support up to 100 shared references, maintain contextual continuity, and allow iterative work."},{q:"What is the purpose of a notebook in Microsoft 365 Copilot?",opts:["A. To create a transcript of a conversation that you can email to other users.","B. To provide a private location to organize reference materials across related conversations.","C. To generate a summary of all interactions during a specific conversation."],ans:["B"],multi:false,exp:"A Copilot Notebook is a focused, AI-powered workspace designed to organize reference materials for specific projects — Word docs, PDFs, PowerPoint decks, meeting notes, and previous chats."},{q:"You have an Excel workbook with OrderDate, OrderNumber, Amount columns. You plan to generate a monthly summary. What should you include in the prompt?",opts:["A. The desired format of the response.","B. A specific cell range from the worksheet.","C. The file name of the workbook.","D. The clear goal of the summary.","E. A formula to calculate monthly totals."],ans:["D"],multi:false,exp:"A clear goal is the most critical element. Without it, Copilot may provide generic insights. Other elements (format, context, source) improve results, but the goal is the only required component."},{q:"You are creating a prompt to get information about a proposal. You need the response to be grounded in the proposal. What is the best approach?",opts:["A. Add context about the intended audience.","B. Instruct Copilot to rely on its training data to infer proposal details.","C. Reference the proposal content in the prompt.","D. Add a specific goal that you want Copilot to accomplish."],ans:["C"],multi:false,exp:"Use the forward slash (/) command to directly reference the file in your prompt (e.g., /[Proposal_Name].docx). Referencing the source is the most critical element for grounding responses."},{q:"You need to improve prompt-grounding during a Copilot conversation. What is the best approach?",opts:["A. Use shorter prompts.","B. Provide the desired output format.","C. Avoid technical jargon.","D. Reference specific files."],ans:["D"],multi:false,exp:"Explicitly referencing specific files with the forward slash (/) command or attachment icon is the best way to improve prompt-grounding, reducing hallucinated content."},{q:"You add Process.docx from a SharePoint site as a reference in a notebook. A user updated the file yesterday. What will occur when you chat?",opts:["A. The chat will reference only the original version of Process.docx.","B. The chat will reference the most recent version of Process.docx.","C. The chat will reference both versions of Process.docx."],ans:["B"],multi:false,exp:"Files from SharePoint are linked, not copied. Copilot automatically reads the most recent version, reflecting any updates made to the SharePoint file."},{q:"You discover a conversation with confidential knowledge sources. You need to delete it without admin approval, retaining other conversations. What should you use?",opts:["A. The Microsoft 365 admin center.","B. The My Account portal in Microsoft 365 Copilot.","C. The Microsoft Purview compliance portal.","D. The Microsoft 365 Copilot app."],ans:["B"],multi:false,exp:"Through myaccount.microsoft.com, navigate to Settings & Privacy > Privacy > Data options > Copilot activity history to delete history without admin approval."},{q:"You have an open Copilot conversation. You need to chat with an agent named Agent1. What should you enter?",opts:["A. {Agent1}","B. #Agent1","C. /Agent1","D. @Agent1"],ans:["D"],multi:false,exp:"Use the @ symbol followed by the agent name (e.g., @Agent1) to mention and invoke a specific agent within the chat — consistent with @mention functionality across M365 apps."},{q:"You regularly upload the same five files to Copilot chats. You need to simplify referencing them. What are two ways?",opts:["A. Create an agent that has a knowledge source.","B. Send a prompt that includes the files, and then save the prompt.","C. Create a notebook that references the files.","D. Ask the data engineers to create a fine-tuned model.","E. Zip the documents and upload the ZIP file to the chats."],ans:["B","C"],multi:true,exp:"[B] Save a prompt with file references: attach files, create your prompt, then bookmark it for reuse. [C] Create a Copilot Notebook: add files once via the References tab — they persist across sessions."},{q:"You have no Copilot license. When you send a prompt in Copilot Chat, which three sources does it use?",opts:["A. Chat data in Microsoft Teams","B. Your organization's databases","C. The prompt context","D. Organizational data in Microsoft 365","E. Internet search data","F. The conversation history"],ans:["C","E","F"],multi:true,exp:"Without a Copilot license: [C] immediate prompt context, [E] internet search data via Bing, and [F] current session's conversation history. No access to Teams chats, emails, or OneDrive files."},{q:"You create an agent to monitor project milestones, follow up on client emails, and generate weekly reports. With whom can you share the agent?",opts:["A. Only the people in your organization.","B. The people in your organization and people that have personal Microsoft accounts.","C. Only Microsoft Teams channel members.","D. Any person who has a valid email address."],ans:["A"],multi:false,exp:"Agents created with a M365 Copilot license can only be shared within your organization — with specific users (up to 98), security groups, or everyone in your tenant. External sharing requires Copilot Studio."},{q:"From Copilot, you add custom instructions. For each statement, select Yes or No:\n1. The instructions apply to new chat conversations.\n2. The instructions apply to new conversations with Researcher and Analyst agents.\n3. The instructions apply to previous responses in existing conversations.",opts:["A. Yes / No / No","B. Yes / Yes / Yes","C. No / Yes / No","D. No / No / Yes"],ans:["A"],multi:false,exp:"[1] Yes: Apply to all new chat conversations. [2] No: Researcher and Analyst agents have specialized built-in reasoning that may override global preferences. [3] No: Instructions do NOT apply retroactively."},{q:"You create an agent using a template. For each statement, select Yes or No:\n1. You can share the agent with external users.\n2. You can choose which knowledge sources the agent uses.\n3. You can share the agent with users in your organization.",opts:["A. No / Yes / Yes","B. Yes / Yes / Yes","C. No / No / Yes","D. Yes / No / No"],ans:["A"],multi:false,exp:"[1] No: Template agents are restricted to internal users; external sharing requires Copilot Studio. [2] Yes: You select which knowledge sources the agent uses. [3] Yes: You can share with users, groups, or everyone in your org."},{q:"For each statement, select Yes or No:\n1. You can review Copilot activity history from the My Account portal.\n2. Deleting activity history immediately deletes all associated notebooks and pages.\n3. Users can delete their entire Copilot activity history including prompts and responses.",opts:["A. Yes / No / Yes","B. Yes / Yes / Yes","C. No / No / Yes","D. Yes / No / No"],ans:["A"],multi:false,exp:"[1] Yes: Viewable and exportable from My Account portal. [2] No: Deleting history removes conversation logs but NOT notebooks/pages, which persist independently. [3] Yes: Full history deletion is available."},{q:"For each statement, select Yes or No:\n1. Submitting the same prompt grounded in the web always gives the same response.\n2. Submitting the same prompt grounded in your own data always gives the same response.\n3. Submitting the same prompt grounded only in model knowledge always gives the same response.",opts:["A. No / No / No","B. Yes / Yes / Yes","C. No / Yes / No","D. Yes / No / Yes"],ans:["A"],multi:false,exp:"All No. LLMs are inherently probabilistic. Web content changes over time. Organizational data may be updated. There is no 'seed' control in Copilot — same prompts can yield different but appropriate responses."},{q:"For each statement, select Yes or No:\n1. Copilot uses organizational context to suggest prompts.\n2. Copilot can use organizational context to train the LLM.\n3. Copilot uses organizational context to augment a prompt before sending it to the LLM.",opts:["A. Yes / No / Yes","B. Yes / Yes / Yes","C. No / Yes / No","D. No / No / Yes"],ans:["A"],multi:false,exp:"[1] Yes: Context IQ scans recent activity to suggest relevant prompts. [2] No: Customer data is NEVER used to train LLMs — only for real-time grounding. [3] Yes: Copilot augments prompts via Microsoft Graph before the LLM processes them."},{q:"For each statement, select Yes or No:\n1. Copilot can use its own model knowledge to make responses more specific.\n2. Copilot can use business data to provide additional context.\n3. Copilot can use the latest web information to provide additional context.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. No / No / Yes"],ans:["A"],multi:false,exp:"All Yes. Copilot combines: [1] LLM training knowledge for inference, [2] organizational business data via Graph grounding, and [3] real-time web information via Bing — for comprehensive, accurate responses."},{q:"From Microsoft 365 Copilot, you can use _______ to help users begin conversations with an agent and guide them to use the agent effectively.",opts:["A. Agent settings","B. Capabilities","C. Instructions","D. Suggested prompts"],ans:["D"],multi:false,exp:"Suggested prompts (conversation starters) appear on the agent's welcome page — up to six can be configured — helping users immediately understand capabilities and interact effectively."},{q:"You need to delete ALL your Copilot conversations using the least effort. What is the best approach?",opts:["A. The Microsoft 365 Copilot web app.","B. The My Account portal in Microsoft 365.","C. The Microsoft 365 Copilot desktop app.","D. The Settings app in Windows 11."],ans:["B"],multi:false,exp:"The My Account portal allows bulk deletion of the entire Copilot activity history across ALL M365 apps in one action: Settings & Privacy > Privacy > Data options > Copilot activity history."},{q:"From Microsoft 365, you _______ the Researcher agent.",opts:["A. Cannot modify the settings of","B. Can modify the agent instructions of","C. Can add an additional suggested prompt to","D. Can delete one of the suggested prompts from"],ans:["A"],multi:false,exp:"The Researcher is a first-party Microsoft agent with locked core behavior. Users cannot modify its instructions, add prompts, or delete its predefined prompts."},{q:"You are creating an agent. The agent persona must be warm and friendly. To set the persona, you should modify the _______.",opts:["A. Capabilities.","B. Description.","C. Instructions.","D. Suggested prompts."],ans:["C"],multi:false,exp:"Instructions define an agent's behavior, tone, and style. Explicitly state: 'The agent must always use a warm, friendly, and helpful tone' in the Instructions field of the Configure tab."},{q:"_______ enables organizations to apply governance policies to conversations generated by using Microsoft 365 Copilot.",opts:["A. Microsoft Defender for Cloud","B. Microsoft Entra ID","C. Microsoft Intune","D. Microsoft Purview"],ans:["D"],multi:false,exp:"Microsoft Purview provides Communication Compliance, Retention Policies, Data Loss Prevention, and Audit/eDiscovery tools for governing Copilot interactions."},{q:"You receive the response: 'Sorry, it looks like I can't respond to this. Let's try a different topic.' What is a possible cause?",opts:["A. The prompt is too vague.","B. The prompt contains language that violates safety guidelines.","C. The prompt contains more than five requests.","D. The prompt is larger than the allowed context window."],ans:["B"],multi:false,exp:"This response typically indicates the query triggered Microsoft's safety filters (prohibited topics, inappropriate content), referenced restricted data, or violated Responsible AI guidelines."},{q:"You are a medical researcher. You need Copilot to respond professionally in your field. What is the best approach?",opts:["A. In the conversation, attach an example to your prompts.","B. From Settings, configure Custom instructions.","C. In the conversation, create a sample prompt and save it to the Copilot Prompt Gallery.","D. From Settings, configure Copilot Memory."],ans:["B"],multi:false,exp:"Custom instructions (Settings > Personalization) define persistent rules for tone and terminology across all interactions — e.g., 'Use formal medical terminology' — without repeating them in every prompt."},{q:"For each statement, select Yes or No:\n1. You can chat with the Analyst agent from within an existing Copilot conversation.\n2. You can chat with the Researcher agent from within an existing Copilot conversation.\n3. You can chat with multiple agents concurrently within an existing Copilot conversation.",opts:["A. Yes / Yes / Yes","B. Yes / No / No","C. No / Yes / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] @Analyst invokes the Analyst agent mid-conversation. [2] @Researcher similarly for the Researcher agent. [3] Multiple agents can be invoked concurrently using @mentions."},{q:"You need to access Microsoft 365 Copilot from a web browser. Which URL should you use?",opts:["A. https://m365.cloud.microsoft","B. https://copilotstudio.microsoft.com","C. https://myapps.microsoft.com","D. https://myaccount.microsoft.com"],ans:["A"],multi:false,exp:"https://m365.cloud.microsoft is the primary web portal for the M365 Copilot app. https://copilotstudio.microsoft.com is for Copilot Studio (building agents)."},{q:"Match each prompt to the best tool:\nP1: Consolidate Excel sheets, categorize feedback, compute sentiment, visualize top 5 drivers.\nP2: Using SharePoint + web, produce a 1-page AI trends brief with citations.\nP3: Prepare a polished executive email from an attached Strategic_Plan_2025.docx.",opts:["A. P1: Analyst / P2: Researcher / P3: Chat","B. P1: Researcher / P2: Analyst / P3: Chat","C. P1: Chat / P2: Analyst / P3: Researcher","D. P1: Analyst / P2: Chat / P3: Researcher"],ans:["A"],multi:false,exp:"P1→Analyst: multi-sheet data consolidation, sentiment, visualization. P2→Researcher: combines SharePoint + web sources for cited reports. P3→Chat: fast document summarization and email drafting."},{q:"A document called Document1.docx has a red shield icon in Copilot. What does this indicate?",opts:["A. It is in a notebook.","B. It has a sensitivity label applied.","C. It is NOT a supported file type.","D. It is NOT accessible outside of your organization."],ans:["D"],multi:false,exp:"A red shield indicates the document has a high-priority sensitivity label restricting external access and preventing external sharing. Copilot only processes it if you have VIEW/EXTRACT rights."},{q:"For each statement about creating an agent, select Yes or No:\n1. You can configure the agent to search shared mailboxes.\n2. You can use natural language prompts to create the agent.\n3. You can configure the agent to use another agent as a knowledge source.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. No / No / No"],ans:["A"],multi:false,exp:"All Yes. [1] Agents can search shared/delegated mailboxes (available since Sept 2025). [2] Agent Builder uses natural language without coding. [3] Agents can use other agents as 'child' knowledge sources."},{q:"For each statement about creating an agent in the M365 Copilot app, select Yes or No:\n1. The agent will be available in Microsoft Word.\n2. The agent can be shared to other users in your organization.\n3. The agent can contain complex workflows using third-party connectors.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Agent Mode in Word is available for M365 Copilot licensed users. [2] Agents can be shared with users, groups, or the entire org. [3] Agents integrate with 1,400+ external systems via third-party connectors."},{q:"You create a prompt with OneDrive files and share it by email. What occurs when the user uses the prompt?",opts:["A. The user is granted access to the files automatically and can run the prompt.","B. The files are removed from the shared prompt, and the user must add them manually.","C. The user is prompted to request access to the files when they attempt to run the prompt.","D. The user can run the prompt successfully only if they have access to the files in your OneDrive."],ans:["D"],multi:false,exp:"Copilot strictly respects M365 permissions. Sharing a prompt does NOT share the referenced OneDrive files. If the user lacks access, the prompt fails or returns a generic answer."},{q:"In Microsoft 365 Copilot, you save a prompt. Which two actions can you perform for the saved prompt?",opts:["A. Modify the saved prompt text.","B. Remove the saved prompt from the Copilot Prompt Gallery.","C. Update the title of the saved prompt.","D. Schedule the saved prompt to run daily.","E. Share the saved prompt to a Microsoft Teams team."],ans:["A","B"],multi:true,exp:"For saved prompts, you can: [A] modify the prompt text and [B] remove it from the Copilot Prompt Gallery. Scheduling is a separate feature; sharing to a Teams team is not a direct saved prompt action."},{q:"For each statement, select Yes or No:\n1. From the desktop app, you can see only the last 20 conversations.\n2. From the desktop app, you can hide conversations but cannot delete them.\n3. A conversation started in the desktop app can be continued in a web browser on a different computer.",opts:["A. No / No / Yes","B. Yes / Yes / Yes","C. No / Yes / No","D. Yes / No / Yes"],ans:["A"],multi:false,exp:"[1] No: Full history accessible via 'All conversations' with infinite scroll (rolling out March 2026). [2] No: You CAN delete individual conversations by right-clicking. [3] Yes: History is stored in the cloud (up to 18 months), accessible from any device."},{q:"For each statement, select Yes or No:\n1. You can group conversations into a Copilot notebook.\n2. You can use a Copilot notebook to collaborate with users in your organization.\n3. You can add instructions to a Copilot notebook to tell Copilot how to respond.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Conversations, files, and meeting notes can be grouped into a notebook. [2] Notebooks can be shared for real-time co-creation. [3] Custom instructions can be added via 'Add Copilot instructions' in the notebook menu."},{q:"For each statement, select Yes or No:\n1. Scheduled prompts can be web-grounded.\n2. Scheduled prompts can run a maximum of once per day.\n3. Scheduled prompts can run up to a maximum of 15 times.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Web grounding is supported for up-to-date information. [2] Maximum frequency is once per day (also weekly or monthly). [3] Maximum run limit is 15 occurrences; up to 10 active scheduled prompts allowed."},{q:"You plan to summarize a partnership proposal as 3-5 concise bullet points for a kickoff meeting. Which two details should you include in the prompt?",opts:["A. A list of contact details for key stakeholders.","B. Profiles of both companies generated by using the Researcher agent.","C. A specific knowledge source to ground the response.","D. Concise instructions for what to do with the proposal."],ans:["B","C"],multi:true,exp:"[B] Researcher agent profiles provide context about both organizations. [C] Referencing a specific knowledge source (the proposal document) grounds the response in actual proposal content."},{q:"In a Copilot conversation, you generate a report, then edit it in a page. You need to collaborate with a colleague. What are two ways?",opts:["A. Mention the colleague in the page.","B. Open the page in Microsoft Word.","C. Share the page link.","D. Add the page to a notebook."],ans:["B","C"],multi:true,exp:"[B] Open in Word for traditional real-time co-authoring. [C] Share the page link — Copilot Pages supports real-time collaboration where both parties can edit simultaneously."},{q:"You attend many Teams meetings. You want to catch up on key points and next steps after each meeting. Which Copilot feature should you use?",opts:["A. Recap","B. Meeting Whiteboard","C. Meeting info","D. Thread summaries"],ans:["A"],multi:false,exp:"Intelligent Recap provides AI-powered automatic meeting notes, AI-recommended tasks, personalized timeline markers, and chapter markers. Requires a M365 Copilot license and meeting transcription."},{q:"You are creating a custom agent for marketing to produce copy, logos, and artwork. What should you add to the agent?",opts:["A. Code interpreter","B. Image generator","C. A suggested prompt","D. A template"],ans:["B"],multi:false,exp:"The Image Generator capability must be enabled in the Configure tab (toggle 'Create images' in Capabilities) to allow the agent to produce logos and artwork."},{q:"You use Copilot to create a proposal in Word based on a SharePoint document. You need to ensure cited information is accurate. What is the best approach?",opts:["A. Manually verify the citations in the generated content.","B. Use Copilot in Word to verify the citations.","C. Create an agent with your organization's editorial standards to verify citations.","D. Create a notebook with all reference material to verify citations."],ans:["B"],multi:false,exp:"Using Copilot in Word to verify citations is best — Copilot provides source links enabling cross-reference of generated text against original documents. Even grounded AI can produce incomplete information."},{q:"For each statement, select Yes or No:\n1. Copilot can answer questions about Teams meetings you are NOT invited to.\n2. Copilot can provide summaries and answer questions about chat messages, channel posts, and Teams meetings.\n3. Copilot can provide a summary of upcoming Teams meetings you are invited to next week.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Copilot can access recorded/transcribed meetings you have permission to view. [2] Copilot provides summaries and Q&A for chats, channels, and meetings. [3] Copilot queries your calendar to summarize upcoming meetings."},{q:"You sign in to the M365 Copilot app but don't see the Researcher agent. A colleague has access to it. What should you do?",opts:["A. Request a Microsoft 365 Copilot license from an administrator.","B. Select Explore agents and then search for Researcher.","C. Sign in to the Copilot app by using a personal account.","D. From Microsoft Edge, sign in to https://copilot.microsoft.com."],ans:["A"],multi:false,exp:"The Researcher agent requires a M365 Copilot license. The exhibit shows no Researcher agent listed — the user doesn't have the license. Requesting it from an administrator is the correct first step."},{q:"When creating an agent in Microsoft 365 Copilot, you can leverage generative AI to build the agent by using _______.",opts:["A. The Configure tab","B. A Copilot notebook","C. A Copilot page","D. The Describe tab"],ans:["A"],multi:false,exp:"The Configure tab lets you enable generative AI capabilities (Code Interpreter, Image Generator), add knowledge sources, manage suggested prompts, and refine the agent's identity. The Describe tab uses conversational language for initial setup."},{q:"What are two limitations of prompt scheduling in Microsoft 365 Copilot?\n• You can schedule the prompt to run as often as: ______\n• The maximum number of times a scheduled prompt can run is: ______",opts:["A. Once per hour / 15 times","B. Once per day / 15 times","C. Once per week / 365 times","D. Once per day / Unlimited"],ans:["B"],multi:false,exp:"Maximum frequency = once per day (also weekly or monthly available). Maximum run limit = 15 occurrences per scheduled prompt. Up to 10 active scheduled prompts allowed at any time."},{q:"Match each prompt to the best tool:\nP1: Explain differences between Contoso and Litware with sources and a table.\nP2: From 3 Excel sales files, create a pivot table, highlight MoM changes >10%, recommend 3 follow-up analyses.\nP3: Generate a structured action plan from an ongoing meeting chat, grouping tasks by functional area.",opts:["A. P1: Researcher / P2: Analyst / P3: Chat","B. P1: Analyst / P2: Researcher / P3: Chat","C. P1: Chat / P2: Analyst / P3: Researcher","D. P1: Researcher / P2: Chat / P3: Analyst"],ans:["A"],multi:false,exp:"P1→Researcher: aggregates web + internal sources, creates cited tables for competitor analysis. P2→Analyst: handles multi-file Excel data, MoM calculations, Python-based deep reasoning. P3→Chat: fast conversational task for parsing meeting chat and organizing action items."},{q:"You are using Copilot during a Teams meeting. After the meeting, you can only _______ if the meeting was transcribed.",opts:["A. Schedule a follow-up meeting.","B. Create a summary of the meeting chat.","C. Identify content that was attached to the meeting.","D. Generate a recap of what was discussed during the meeting."],ans:["D"],multi:false,exp:"Post-meeting recaps require transcription to have been enabled. Without it, Copilot uses a temporary speech-to-text stream deleted when the meeting ends. The organizer must set 'Allow Copilot' to 'During and after'."},{q:"You generate a report using the Researcher agent. You can use _______ to save and edit the response.",opts:["A. An agent","B. A conversation","C. A notebook","D. A page"],ans:["D"],multi:false,exp:"Copilot Pages (part of Loop) is the most integrated way to save and edit Researcher agent output. Select 'Edit in Pages' below the response to create a collaborative, persistent, editable canvas."},{q:"For each statement, select Yes or No:\n1. You can add a Microsoft Teams chat as a knowledge source to a Copilot agent.\n2. You can add a Copilot conversation as a knowledge source to a Copilot agent.\n3. You can use an image file (JPG) as a knowledge source for a Copilot agent.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Teams chats can be added as knowledge sources. [2] Copilot conversations can be added as knowledge sources. [3] Image files (JPG, PNG, WEBP, non-animated GIF) are supported (max 15MB, requires 'File processing' capability)."},{q:"You run a prompt using the Researcher agent. For each statement, select Yes or No:\n1. You can continue the conversation in Copilot in Word.\n2. You can continue the conversation in Copilot for Teams.\n3. You can continue the conversation in Copilot in Outlook.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. Continue in Word to build reports, in Teams to share insights with colleagues, and in Outlook to summarize threads or draft proposals based on Researcher findings."},{q:"You join a Teams meeting late. The meeting is being recorded. You need to summarize the missed portion as soon as possible. What is the best approach?",opts:["A. From the Teams app, ask Copilot in Teams to summarize what you missed so far.","B. From the meeting, read the transcript.","C. From the Microsoft 365 Copilot app, ask Copilot to tell you what you missed.","D. From the Teams app, view the intelligent recap."],ans:["D"],multi:false,exp:"Intelligent Recap (Recap tab in the meeting chat or calendar entry) provides AI-generated notes, key discussion topics, action items, speaker timelines, and chapter markers — the fastest comprehensive way to catch up."},{q:"You have a Word document with a 'Highly Confidential' sensitivity label. From PowerPoint, you use Copilot to generate a presentation from it. What is the result?",opts:["A. Copilot will be unable to generate the presentation.","B. Copilot will generate the presentation and prompt you for a label.","C. Copilot will generate the presentation and apply the Highly Confidential label.","D. Copilot will generate the presentation and will NOT apply a label."],ans:["C"],multi:false,exp:"When Copilot generates content from a labeled source, the new content automatically inherits the sensitivity label with all its protection settings. Copilot first verifies you have EXTRACT and VIEW rights."},{q:"For each statement, select Yes or No:\n1. Copilot indicates whether source content has a sensitivity label as part of the references.\n2. Copilot can summarize SharePoint files with sensitivity labels if you have access.\n3. New content created from a labeled item automatically inherits the sensitivity label.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Since early 2025, Copilot shows sensitivity label shields in responses. [2] Copilot can summarize labeled files if you have access. [3] New content inherits the highest-priority label with all protection settings."},{q:"From Microsoft 365 Copilot, if you want to aggregate data and produce charts from the data, you should use _______.",opts:["A. The Analyst agent.","B. A notebook.","C. A page.","D. The Researcher agent."],ans:["A"],multi:false,exp:"The Analyst agent is designed for data aggregation and visualization. It connects to data sources, creates chart types based on prompts, and uses Python-based deep reasoning for complex queries."},{q:"For each statement about Copilot notebooks, select Yes or No:\n1. You can create an agent from a notebook.\n2. You can generate an audio overview of a notebook.\n3. Copilot continually adds new references to notebooks.",opts:["A. Yes / Yes / Yes","B. No / Yes / Yes","C. Yes / No / Yes","D. Yes / Yes / No"],ans:["A"],multi:false,exp:"All Yes. [1] Custom agents can be created directly from a notebook. [2] Podcast-style audio overviews are supported (requires M365 Copilot license). [3] References stay current — linked files update dynamically as source documents are modified."}];
 
+const SUPABASE_URL="https://xohrkjzxgkqonhpptdfg.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvaHJranp4Z2txb25ocHB0ZGZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkxODMzNjksImV4cCI6MjA5NDc1OTM2OX0.YgYxZFb3tDHYjDGK-Rx1fzvgVvFyZWKPEc7Gc14ZxBc";
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 const L=["A","B","C","D","E","F"];
+const SESSION_KEY='ab730_session_id';
 let order=questions.map((_,i)=>i);
 let cur=0,sel=[],submitted=false,score=0,done=false,results=[],shuffle=false;
+let startTime=Date.now(),saveStatus='',showHistory=false,historyData=null,historyLoading=false;
+let sessionId=null,booting=true;
+
+function newSessionId(){return crypto.randomUUID();}
 
 function shuffleArr(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 
@@ -84,11 +114,25 @@ function render(){
   const app=document.getElementById('app');
   const total=questions.length;
 
+  if(booting){
+    app.innerHTML=`<div class="history-loading" style="padding:60px 16px">⏳ Chargement de la session...</div>`;
+    return;
+  }
+
+  if(showHistory){
+    renderHistory(app);
+    return;
+  }
+
   if(done){
     const pct=Math.round((score/total)*100);
     const correct=results.filter(r=>r.correct).length;
     const wrong=results.filter(r=>!r.correct).length;
     const emoji=pct>=80?"🎉":pct>=60?"👍":"📚";
+    let statusCls='save-status';
+    if(saveStatus.startsWith('ok'))statusCls+=' ok';
+    else if(saveStatus.startsWith('ko'))statusCls+=' ko';
+    const statusText=saveStatus.startsWith('ok')?'✓ Session enregistrée':saveStatus.startsWith('ko')?'⚠ Erreur d\'enregistrement':saveStatus==='saving'?'⏳ Enregistrement...':'';
     app.innerHTML=`<div class="done">
       <div class="done-emoji">${emoji}</div>
       <h2 class="done-title">Quiz terminé !</h2>
@@ -100,7 +144,9 @@ function render(){
         <div class="done-cell"><div class="done-cell-val" style="color:#dc2626">${wrong}</div><div class="done-cell-lbl">Incorrect</div></div>
         <div class="done-cell"><div class="done-cell-val" style="color:#2563eb">${pct}%</div><div class="done-cell-lbl">Score</div></div>
       </div>
-      <button class="btn-restart" onclick="restart()">🔄 Recommencer</button>
+      <div class="${statusCls}">${statusText}</div>
+      <button class="btn-restart" onclick="restart()" style="margin-top:8px">🔄 Recommencer</button>
+      <button class="history-btn" style="margin-top:10px;width:100%;padding:10px" onclick="openHistory()">📊 Voir l'historique</button>
     </div>`;
     return;
   }
@@ -146,9 +192,9 @@ function render(){
     const r=results[i];
     let cls='dot ';
     if(r) cls+=r.correct?'dot-ok':'dot-ko';
-    else if(i===cur) cls+='dot-done';
     else cls+='dot-future';
-    dotsHtml+=`<div class="${cls}"></div>`;
+    if(i===cur) cls+=' dot-current';
+    dotsHtml+=`<button class="${cls}" onclick="goTo(${i})" title="Question ${i+1}"></button>`;
   }
   dotsHtml+='</div>';
 
@@ -164,6 +210,8 @@ function render(){
       <div class="header-right">
         <span class="score">✓ ${score} pts</span>
         <button class="${shuffleCls}" onclick="toggleShuffle()">${shuffleTxt}</button>
+        <button class="history-btn" onclick="saveProgress()" title="Sauvegarder la progression">${saveStatus==='saving'?'⏳':saveStatus==='ok-progress'?'✓ Sauvé':saveStatus==='ko'?'⚠ Erreur':'💾 Sauver'}</button>
+        <button class="history-btn" onclick="openHistory()">📊 Historique</button>
       </div>
     </div>
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -204,27 +252,159 @@ function submit(){
 function next(){
   const total=questions.length;
   if(cur<total-1){cur++;sel=results[cur]?[...results[cur].sel]:[];submitted=!!results[cur];render();}
-  else{done=true;render();}
+  else{done=true;saveSession();render();}
+}
+
+function buildPayload(status){
+  const total=questions.length;
+  const pct=Math.round((score/total)*100);
+  const duration=Math.round((Date.now()-startTime)/1000);
+  return{
+    session_id:sessionId,
+    score,total,percentage:pct,duration_seconds:duration,shuffle,status,
+    current_index:cur,
+    updated_at:new Date().toISOString(),
+    results:results.map((r,i)=>r?{i,correct:r.correct,sel:r.sel,ans:r.ans,q_index:order[i]}:null).filter(Boolean),
+    order_snapshot:order
+  };
+}
+
+async function upsertSession(status){
+  saveStatus='saving';render();
+  try{
+    const payload=buildPayload(status);
+    const{error}=await sb.from('quiz_sessions').upsert(payload,{onConflict:'session_id'});
+    if(error)throw error;
+    saveStatus=status==='completed'?'ok':'ok-progress';
+  }catch(e){
+    console.error('Save error',e);
+    saveStatus='ko';
+  }
+  render();
+  if(saveStatus==='ok-progress')setTimeout(()=>{if(saveStatus==='ok-progress'){saveStatus='';render();}},2500);
+}
+
+async function saveProgress(){
+  if(done)return;
+  await upsertSession('in_progress');
+}
+
+async function saveSession(){
+  await upsertSession('completed');
+}
+
+async function tryResume(){
+  const sid=localStorage.getItem(SESSION_KEY);
+  if(!sid){sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);booting=false;render();return;}
+  try{
+    const{data,error}=await sb.from('quiz_sessions').select('*').eq('session_id',sid).maybeSingle();
+    if(error)throw error;
+    if(!data||data.status==='completed'){
+      sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);booting=false;render();return;
+    }
+    sessionId=sid;
+    shuffle=!!data.shuffle;
+    if(data.order_snapshot&&Array.isArray(data.order_snapshot))order=data.order_snapshot;
+    cur=data.current_index||0;
+    score=data.score||0;
+    results=[];
+    if(Array.isArray(data.results)){
+      data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans};});
+    }
+    sel=results[cur]?[...results[cur].sel]:[];
+    submitted=!!results[cur];
+  }catch(e){
+    console.error('Resume error',e);
+    sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+  }
+  booting=false;
+  render();
+}
+
+async function openHistory(){
+  showHistory=true;
+  historyLoading=true;
+  historyData=null;
+  render();
+  try{
+    const{data,error}=await sb.from('quiz_sessions').select('*').order('created_at',{ascending:false}).limit(50);
+    if(error)throw error;
+    historyData=data||[];
+  }catch(e){
+    console.error('Load error',e);
+    historyData=[];
+  }
+  historyLoading=false;
+  render();
+}
+
+function closeHistory(){
+  showHistory=false;
+  render();
+}
+
+function renderHistory(app){
+  let body='';
+  if(historyLoading){
+    body='<div class="history-loading">⏳ Chargement...</div>';
+  }else if(!historyData||historyData.length===0){
+    body='<div class="history-empty">Aucune session enregistrée pour le moment.<br/>Termine un quiz pour voir ton historique ici.</div>';
+  }else{
+    body='<div class="history-list">'+historyData.map(s=>{
+      const d=new Date(s.created_at);
+      const dateStr=d.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})+' · '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+      const pct=s.percentage;
+      const cls=pct>=80?'good':pct>=60?'mid':'bad';
+      const dur=s.duration_seconds?Math.round(s.duration_seconds/60)+' min':'—';
+      const mode=s.shuffle?'🔀 Aléatoire':'🔢 Ordre';
+      return `<div class="history-item">
+        <div>
+          <div class="history-date">${dateStr}</div>
+          <div class="history-meta">${s.score}/${s.total} · ${dur} · ${mode}</div>
+        </div>
+        <div class="history-score ${cls}">${pct}%</div>
+      </div>`;
+    }).join('')+'</div>';
+  }
+  app.innerHTML=`<div class="history">
+    <div class="history-title">
+      <span>📊 Historique des sessions</span>
+      <span style="font-size:12px;font-weight:500;color:#94a3b8">${historyData?historyData.length:0} session(s)</span>
+    </div>
+    ${body}
+    <button class="btn-back" onclick="closeHistory()">← Retour</button>
+  </div>`;
 }
 
 function prev(){
   if(cur>0){cur--;sel=results[cur]?[...results[cur].sel]:[];submitted=!!results[cur];render();}
 }
 
+function goTo(i){
+  const total=questions.length;
+  if(i<0||i>=total||i===cur)return;
+  cur=i;
+  sel=results[cur]?[...results[cur].sel]:[];
+  submitted=!!results[cur];
+  render();
+}
+
 function toggleShuffle(){
   shuffle=!shuffle;
   order=shuffle?shuffleArr(questions.map((_,i)=>i)):questions.map((_,i)=>i);
-  cur=0;sel=[];submitted=false;score=0;done=false;results=[];
+  cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
+  sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
   render();
 }
 
 function restart(){
   order=shuffle?shuffleArr(questions.map((_,i)=>i)):questions.map((_,i)=>i);
-  cur=0;sel=[];submitted=false;score=0;done=false;results=[];
+  cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
+  sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
   render();
 }
 
-render();
+tryResume();
 </script>
 </body>
 </html>

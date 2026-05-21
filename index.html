@@ -88,6 +88,16 @@
   .history-score.good{color:#16a34a}
   .btn-back{width:100%;background:#2563eb;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:16px}
   .history-loading{text-align:center;padding:24px;color:#94a3b8;font-size:15px}
+  .flag-btn{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 8px;border-radius:8px;transition:transform .15s, background .15s;line-height:1}
+  .flag-btn:hover{background:rgba(255,255,255,.15);transform:scale(1.15)}
+  .flag-btn.flagged{filter:drop-shadow(0 0 4px #fbbf24)}
+  .card-header-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .card-header-row .card-q{flex:1}
+  .dot-flagged{box-shadow:0 0 0 2px #f59e0b inset, 0 0 0 3px #fff inset}
+  .review-banner{background:#fef3c7;border:1.5px solid #fcd34d;border-radius:14px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:14px;color:#b45309;font-weight:600}
+  .review-banner button{background:#b45309;color:#fff;border:none;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer}
+  .btn-review{width:100%;background:#f59e0b;color:#fff;border:none;border-radius:14px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}
+  .btn-review:disabled{opacity:.4;cursor:default}
 </style>
 </head>
 <body>
@@ -101,10 +111,29 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 const L=["A","B","C","D","E","F"];
 const SESSION_KEY='ab730_session_id';
+const FLAGS_LOCAL_PREFIX='ab730_flags_';
 let order=questions.map((_,i)=>i);
 let cur=0,sel=[],submitted=false,score=0,done=false,results=[],shuffle=false;
 let startTime=Date.now(),saveStatus='',showHistory=false,historyData=null,historyLoading=false;
 let sessionId=null,booting=true;
+let flagged=new Set();
+
+function flagsKey(sid){return FLAGS_LOCAL_PREFIX+sid;}
+function loadFlagsForSession(sid){
+  try{const raw=localStorage.getItem(flagsKey(sid));if(!raw)return new Set();const arr=JSON.parse(raw);return new Set(Array.isArray(arr)?arr:[]);}
+  catch(e){return new Set();}
+}
+function persistFlags(){
+  if(!sessionId)return;
+  try{localStorage.setItem(flagsKey(sessionId),JSON.stringify([...flagged]));}catch(e){}
+}
+function toggleFlag(){
+  const qIdx=order[cur];
+  if(flagged.has(qIdx))flagged.delete(qIdx);else flagged.add(qIdx);
+  persistFlags();
+  upsertSession(done?'completed':'in_progress').catch(()=>{});
+  render();
+}
 
 function newSessionId(){return crypto.randomUUID();}
 
@@ -146,6 +175,7 @@ function render(){
       </div>
       <div class="${statusCls}">${statusText}</div>
       <button class="btn-restart" onclick="restart()" style="margin-top:8px">🔄 Recommencer</button>
+      <button class="btn-review" onclick="startReviewFlagged()" ${flagged.size?'':'disabled'}>🚩 Revoir les questions flaguées${flagged.size?` (${flagged.size})`:''}</button>
       <button class="history-btn" style="margin-top:10px;width:100%;padding:10px" onclick="openHistory()">📊 Voir l'historique</button>
     </div>`;
     return;
@@ -190,11 +220,15 @@ function render(){
   let dotsHtml='<div class="dots">';
   for(let i=0;i<total;i++){
     const r=results[i];
+    const qIdx=order[i];
+    const isFlagged=flagged.has(qIdx);
     let cls='dot ';
     if(r) cls+=r.correct?'dot-ok':'dot-ko';
     else cls+='dot-future';
     if(i===cur) cls+=' dot-current';
-    dotsHtml+=`<button class="${cls}" onclick="goTo(${i})" title="Question ${i+1}"></button>`;
+    if(isFlagged) cls+=' dot-flagged';
+    const flagMark=isFlagged?' 🚩':'';
+    dotsHtml+=`<button class="${cls}" onclick="goTo(${i})" title="Question ${i+1}${flagMark}"></button>`;
   }
   dotsHtml+='</div>';
 
@@ -219,7 +253,10 @@ function render(){
     <div class="card">
       <div class="card-header">
         <div class="card-type">${q.multi?'⬜ Choix multiple — sélectionnez toutes les bonnes réponses':'⚪ Choix unique'}</div>
-        <div class="card-q">${q.q}</div>
+        <div class="card-header-row">
+          <div class="card-q">${q.q}</div>
+          <button class="flag-btn ${flagged.has(order[cur])?'flagged':''}" onclick="toggleFlag()" title="${flagged.has(order[cur])?'Retirer le drapeau':'Marquer cette question à refaire'}">${flagged.has(order[cur])?'🚩':'🏳️'}</button>
+        </div>
       </div>
       <div class="opts">${optsHtml}</div>
       ${expHtml}
@@ -266,16 +303,24 @@ function buildPayload(status){
     current_index:cur,
     updated_at:new Date().toISOString(),
     results:results.map((r,i)=>r?{i,correct:r.correct,sel:r.sel,ans:r.ans,q_index:order[i]}:null).filter(Boolean),
-    order_snapshot:order
+    order_snapshot:order,
+    flagged_questions:[...flagged]
   };
 }
 
 async function upsertSession(status){
   saveStatus='saving';render();
+  let payload=buildPayload(status);
   try{
-    const payload=buildPayload(status);
-    const{error}=await sb.from('quiz_sessions').upsert(payload,{onConflict:'session_id'});
-    if(error)throw error;
+    let{error}=await sb.from('quiz_sessions').upsert(payload,{onConflict:'session_id'});
+    if(error){
+      const msg=(error.message||'').toLowerCase();
+      if(msg.includes('flagged_questions')||msg.includes('column')){
+        const{flagged_questions,...rest}=payload;
+        const r=await sb.from('quiz_sessions').upsert(rest,{onConflict:'session_id'});
+        if(r.error)throw r.error;
+      }else throw error;
+    }
     saveStatus=status==='completed'?'ok':'ok-progress';
   }catch(e){
     console.error('Save error',e);
@@ -296,12 +341,12 @@ async function saveSession(){
 
 async function tryResume(){
   const sid=localStorage.getItem(SESSION_KEY);
-  if(!sid){sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);booting=false;render();return;}
+  if(!sid){sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);flagged=new Set();booting=false;render();return;}
   try{
     const{data,error}=await sb.from('quiz_sessions').select('*').eq('session_id',sid).maybeSingle();
     if(error)throw error;
     if(!data||data.status==='completed'){
-      sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);booting=false;render();return;
+      sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);flagged=new Set();booting=false;render();return;
     }
     sessionId=sid;
     shuffle=!!data.shuffle;
@@ -312,11 +357,15 @@ async function tryResume(){
     if(Array.isArray(data.results)){
       data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans};});
     }
+    if(Array.isArray(data.flagged_questions))flagged=new Set(data.flagged_questions);
+    else flagged=loadFlagsForSession(sid);
+    persistFlags();
     sel=results[cur]?[...results[cur].sel]:[];
     submitted=!!results[cur];
   }catch(e){
     console.error('Resume error',e);
     sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+    flagged=loadFlagsForSession(sessionId);
   }
   booting=false;
   render();
@@ -361,14 +410,19 @@ function renderHistory(app){
       const inProgress=s.status==='in_progress';
       const statusBadge=inProgress?'<span style="background:#fef3c7;color:#b45309;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-left:6px">EN COURS</span>':'';
       const resumeBtn=inProgress&&s.session_id?`<button class="history-btn" style="margin-left:8px;background:#2563eb;color:#fff" onclick="resumeSessionFromHistory('${s.session_id}')">▶ Reprendre</button>`:'';
+      const flags=Array.isArray(s.flagged_questions)?s.flagged_questions:[];
+      const flagCount=flags.length;
+      const reviewBtn=flagCount?`<button class="history-btn" style="margin-left:8px;background:#f59e0b;color:#fff" onclick='startReviewFlagged(${JSON.stringify(flags)})' title="Revoir les questions flaguées de cette session">🚩 Revoir (${flagCount})</button>`:'';
+      const flagMeta=flagCount?` · 🚩 ${flagCount}`:'';
       return `<div class="history-item">
         <div style="flex:1;min-width:0">
           <div class="history-date">${dateStr}${statusBadge}</div>
-          <div class="history-meta">${s.score}/${s.total} · question ${(s.current_index||0)+1} · ${dur} · ${mode}</div>
+          <div class="history-meta">${s.score}/${s.total} · question ${(s.current_index||0)+1} · ${dur} · ${mode}${flagMeta}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           <div class="history-score ${cls}">${pct}%</div>
           ${resumeBtn}
+          ${reviewBtn}
         </div>
       </div>`;
     }).join('')+'</div>';
@@ -401,6 +455,7 @@ function toggleShuffle(){
   order=shuffle?shuffleArr(questions.map((_,i)=>i)):questions.map((_,i)=>i);
   cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
   sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+  flagged=new Set();persistFlags();
   render();
 }
 
@@ -408,6 +463,19 @@ function restart(){
   order=shuffle?shuffleArr(questions.map((_,i)=>i)):questions.map((_,i)=>i);
   cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
   sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+  flagged=new Set();persistFlags();
+  render();
+}
+
+function startReviewFlagged(srcFlagged){
+  const list=Array.isArray(srcFlagged)?srcFlagged.slice():[...flagged];
+  if(!list.length){alert('Aucune question flaguée à revoir.');return;}
+  order=list.filter(i=>typeof i==='number'&&i>=0&&i<questions.length);
+  if(!order.length){alert('Aucune question flaguée valide à revoir.');return;}
+  cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
+  sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+  flagged=new Set(order);persistFlags();
+  showHistory=false;
   render();
 }
 
@@ -435,6 +503,9 @@ async function resumeSessionFromHistory(sid){
     if(Array.isArray(data.results)){
       data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans};});
     }
+    if(Array.isArray(data.flagged_questions))flagged=new Set(data.flagged_questions);
+    else flagged=loadFlagsForSession(sid);
+    persistFlags();
     sel=results[cur]?[...results[cur].sel]:[];
     submitted=!!results[cur];
     done=data.status==='completed';

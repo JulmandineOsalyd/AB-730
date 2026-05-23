@@ -123,6 +123,24 @@
   .yn-feedback{font-size:11px;font-weight:700;margin-top:4px;display:block}
   .yn-feedback.ok{color:#15803d}
   .yn-feedback.ko{color:#b91c1c}
+  /* MATCH TABLE */
+  .m-wrap{padding:8px 18px 0}
+  .m-row{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px;margin-bottom:10px;display:flex;gap:14px;align-items:stretch;flex-wrap:wrap}
+  .m-prompt{flex:1 1 240px;min-width:200px;font-size:14px;color:#1e293b;line-height:1.5}
+  .m-label{display:inline-block;background:#eff6ff;color:#2563eb;font-weight:700;font-size:12px;border-radius:6px;padding:2px 7px;margin-right:8px}
+  .m-choices{display:flex;flex-direction:column;gap:6px;flex:0 0 200px;min-width:180px}
+  .m-choice{border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#1e293b;text-align:left;transition:all .15s}
+  .m-choice:hover:not(:disabled){border-color:#93c5fd;background:#eff6ff}
+  .m-choice.selected{border-color:#2563eb;background:#eff6ff;color:#1e3a8a}
+  .m-choice:disabled{cursor:default}
+  .m-choice.correct{border-color:#16a34a;background:#f0fdf4;color:#14532d}
+  .m-choice.wrong{border-color:#dc2626;background:#fef2f2;color:#7f1d1d}
+  .m-choice.missed{border:1.5px dashed #16a34a;background:#f0fdf4;color:#14532d}
+  .m-row.ok{background:#f0fdf4}
+  .m-row.ko{background:#fef2f2}
+  .m-feedback{font-size:11px;font-weight:700;margin-top:6px;display:block}
+  .m-feedback.ok{color:#15803d}
+  .m-feedback.ko{color:#b91c1c}
 </style>
 </head>
 <body>
@@ -152,7 +170,50 @@ function parseYesNoQuestion(q){
   return{intro,statements:stmts,correct:norm};
 }
 function isYesNo(qi){return !!parseYesNoQuestion(questions[qi]);}
-function pointsForQuestion(qi){const yn=parseYesNoQuestion(questions[qi]);return yn?yn.statements.length:1;}
+function parseMatchQuestion(q){
+  if(q.multi)return null;
+  const lines=q.q.split('\n').map(s=>s.trim()).filter(Boolean);
+  const prompts=[];
+  for(const line of lines){
+    const m=line.match(/^(P\d+):\s+(.*)$/);
+    if(m)prompts.push({label:m[1],text:m[2].trim()});
+  }
+  if(prompts.length<2)return null;
+  const ansLetter=q.ans[0];
+  const idx=ansLetter.charCodeAt(0)-65;
+  const correctOpt=q.opts[idx];
+  if(!correctOpt)return null;
+  const cleaned=correctOpt.replace(/^[A-F]\.\s*/,'').trim();
+  const parts=cleaned.split('/').map(s=>s.trim());
+  if(parts.length!==prompts.length)return null;
+  const correct=[];
+  for(let i=0;i<parts.length;i++){
+    const m=parts[i].match(/^P\d+:\s*(.+)$/);
+    if(!m)return null;
+    correct.push(m[1].trim());
+  }
+  const choiceSet=new Set();
+  for(const opt of q.opts){
+    const c=opt.replace(/^[A-F]\.\s*/,'').trim();
+    const ps=c.split('/').map(s=>s.trim());
+    for(const p of ps){
+      const m=p.match(/^P\d+:\s*(.+)$/);
+      if(m)choiceSet.add(m[1].trim());
+    }
+  }
+  const choices=[...choiceSet];
+  if(!choices.length)return null;
+  const intro=q.q.split('\n')[0].trim();
+  return{intro,prompts,choices,correct};
+}
+function pointsForQuestion(qi){
+  const q=questions[qi];
+  const yn=parseYesNoQuestion(q);
+  if(yn)return yn.statements.length;
+  const mq=parseMatchQuestion(q);
+  if(mq)return mq.prompts.length;
+  return 1;
+}
 function totalPossiblePoints(){let t=0;for(let i=0;i<questions.length;i++)t+=pointsForQuestion(i);return t;}
 
 const SUPABASE_URL="https://xohrkjzxgkqonhpptdfg.supabase.co";
@@ -234,6 +295,7 @@ function render(){
 
   const q=questions[order[cur]];
   const yn=parseYesNoQuestion(q);
+  const mq=!yn?parseMatchQuestion(q):null;
   const pct=Math.round(((cur+1)/total)*100);
 
   let isCorrect=false;
@@ -242,6 +304,9 @@ function render(){
     if(yn){
       ynPoints=sel.reduce((acc,v,i)=>acc+(v===yn.correct[i]?1:0),0);
       isCorrect=ynPoints===yn.statements.length;
+    } else if(mq){
+      ynPoints=sel.reduce((acc,v,i)=>acc+(v===mq.correct[i]?1:0),0);
+      isCorrect=ynPoints===mq.prompts.length;
     } else {
       isCorrect=[...q.ans].sort().join()===[...sel].sort().join();
     }
@@ -277,6 +342,32 @@ function render(){
       <thead><tr><th>Statements</th><th class="yn-col">Yes</th><th class="yn-col">No</th></tr></thead>
       <tbody>${rows}</tbody>
     </table></div>`;
+  } else if(mq){
+    let rows='';
+    mq.prompts.forEach((p,i)=>{
+      const userVal=sel[i]||null;
+      const correctVal=mq.correct[i];
+      const rowOk=submitted&&userVal===correctVal;
+      const rowKo=submitted&&userVal&&userVal!==correctVal;
+      const rowCls=submitted?(rowOk?'ok':(rowKo?'ko':'')):'';
+      let choicesHtml='';
+      mq.choices.forEach(c=>{
+        let cls='m-choice';
+        if(!submitted){if(userVal===c)cls+=' selected';}
+        else {
+          if(c===correctVal){if(userVal===c)cls+=' correct';else cls+=' missed';}
+          else if(userVal===c&&c!==correctVal)cls+=' wrong';
+        }
+        const safeC=c.replace(/'/g,"\\'");
+        choicesHtml+=`<button class="${cls}" onclick="setMatch(${i},'${safeC}')" ${submitted?'disabled':''}>${c}</button>`;
+      });
+      const fb=submitted?`<span class="m-feedback ${rowOk?'ok':'ko'}">${rowOk?'✓ Correct':`✗ Bonne réponse : ${correctVal}`}</span>`:'';
+      rows+=`<div class="m-row ${rowCls}">
+        <div class="m-prompt"><span class="m-label">${p.label}</span>${p.text}${fb}</div>
+        <div class="m-choices">${choicesHtml}</div>
+      </div>`;
+    });
+    optsHtml=`<div class="m-wrap">${rows}</div>`;
   } else {
     q.opts.forEach((o,i)=>{
       const k=L[i];
@@ -307,6 +398,8 @@ function render(){
     let title;
     if(yn){
       title=isCorrect?`✅ Tous corrects ! · +${ynPoints} pts`:`${ynPoints===0?'❌':'⚠️'} ${ynPoints} / ${yn.statements.length} énoncés corrects · +${ynPoints} pts`;
+    } else if(mq){
+      title=isCorrect?`✅ Tous corrects ! · +${ynPoints} pts`:`${ynPoints===0?'❌':'⚠️'} ${ynPoints} / ${mq.prompts.length} associations correctes · +${ynPoints} pts`;
     } else {
       title=isCorrect?`✅ Correct ! · Réponse : ${q.ans.join(', ')}`:`❌ Incorrect · Réponse correcte : ${q.ans.join(', ')}`;
     }
@@ -323,19 +416,20 @@ function render(){
     const isFlagged=flagged.has(qIdx);
     let cls='dot ';
     if(r){
-      if(r.yn&&!r.correct&&r.points>0)cls+='dot-partial';
+      if((r.yn||r.match)&&!r.correct&&r.points>0)cls+='dot-partial';
       else cls+=r.correct?'dot-ok':'dot-ko';
     } else cls+='dot-future';
     if(i===cur) cls+=' dot-current';
     if(isFlagged) cls+=' dot-flagged';
     const flagMark=isFlagged?' 🚩':'';
-    const ptsInfo=r&&r.yn?` · ${r.points}/${r.maxPoints} pts`:'';
+    const ptsInfo=r&&(r.yn||r.match)?` · ${r.points}/${r.maxPoints} pts`:'';
     dotsHtml+=`<button class="${cls}" onclick="goTo(${i})" title="Question ${i+1}${ptsInfo}${flagMark}"></button>`;
   }
   dotsHtml+='</div>';
 
   let canSubmit;
   if(yn){canSubmit=yn.statements.every((_,i)=>sel[i]==='Yes'||sel[i]==='No');}
+  else if(mq){canSubmit=mq.prompts.every((_,i)=>mq.choices.includes(sel[i]));}
   else{canSubmit=sel.length>0;}
   const btnSubmit=submitted?'':`<button class="btn btn-submit" onclick="submit()" ${canSubmit?'':'disabled'}>Valider</button>`;
   const btnNext=submitted?`<button class="btn btn-next" onclick="next()">${cur===total-1?'Terminer':'Suivant →'}</button>`:'';
@@ -357,9 +451,9 @@ function render(){
     <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
     <div class="card">
       <div class="card-header">
-        <div class="card-type">${q.multi?'⬜ Choix multiple — sélectionnez toutes les bonnes réponses':yn?`📋 Yes / No — chaque énoncé vaut 1 point (${yn.statements.length} pts max)`:'⚪ Choix unique'}</div>
+        <div class="card-type">${q.multi?'⬜ Choix multiple — sélectionnez toutes les bonnes réponses':yn?`📋 Yes / No — chaque énoncé vaut 1 point (${yn.statements.length} pts max)`:mq?`🔗 Match — chaque association vaut 1 point (${mq.prompts.length} pts max)`:'⚪ Choix unique'}</div>
         <div class="card-header-row">
-          <div class="card-q">${yn?yn.intro:q.q}</div>
+          <div class="card-q">${yn?yn.intro:mq?mq.intro:q.q}</div>
           <button class="flag-btn ${flagged.has(order[cur])?'flagged':''}" onclick="toggleFlag()" title="${flagged.has(order[cur])?'Retirer le drapeau':'Marquer cette question à refaire'}">${flagged.has(order[cur])?'🚩':'🏳️'}</button>
         </div>
       </div>
@@ -394,9 +488,22 @@ function setYn(i,val){
   render();
 }
 
+function setMatch(i,val){
+  if(submitted)return;
+  const q=questions[order[cur]];
+  const mq=parseMatchQuestion(q);
+  if(!mq)return;
+  if(!Array.isArray(sel)||sel.length!==mq.prompts.length){
+    sel=new Array(mq.prompts.length).fill(null);
+  }
+  sel[i]=val;
+  render();
+}
+
 function submit(){
   const q=questions[order[cur]];
   const yn=parseYesNoQuestion(q);
+  const mq=!yn?parseMatchQuestion(q):null;
   if(yn){
     if(!Array.isArray(sel)||sel.length!==yn.statements.length||sel.some(v=>v!=='Yes'&&v!=='No'))return;
     const pts=sel.reduce((acc,v,i)=>acc+(v===yn.correct[i]?1:0),0);
@@ -404,6 +511,13 @@ function submit(){
     submitted=true;
     score+=pts;
     results[cur]={correct,sel:[...sel],ans:yn.correct.slice(),yn:true,points:pts,maxPoints:yn.statements.length};
+  } else if(mq){
+    if(!Array.isArray(sel)||sel.length!==mq.prompts.length||sel.some(v=>!mq.choices.includes(v)))return;
+    const pts=sel.reduce((acc,v,i)=>acc+(v===mq.correct[i]?1:0),0);
+    const correct=pts===mq.prompts.length;
+    submitted=true;
+    score+=pts;
+    results[cur]={correct,sel:[...sel],ans:mq.correct.slice(),match:true,points:pts,maxPoints:mq.prompts.length};
   } else {
     if(!sel.length)return;
     submitted=true;
@@ -429,7 +543,7 @@ function buildPayload(status){
     score,total,percentage:pct,duration_seconds:duration,shuffle,status,
     current_index:cur,
     updated_at:new Date().toISOString(),
-    results:results.map((r,i)=>r?{i,correct:r.correct,sel:r.sel,ans:r.ans,q_index:order[i],yn:!!r.yn,points:r.points,maxPoints:r.maxPoints}:null).filter(Boolean),
+    results:results.map((r,i)=>r?{i,correct:r.correct,sel:r.sel,ans:r.ans,q_index:order[i],yn:!!r.yn,match:!!r.match,points:r.points,maxPoints:r.maxPoints}:null).filter(Boolean),
     order_snapshot:order,
     flagged_questions:[...flagged]
   };
@@ -482,7 +596,7 @@ async function tryResume(){
     score=data.score||0;
     results=[];
     if(Array.isArray(data.results)){
-      data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans,yn:!!r.yn,points:r.points,maxPoints:r.maxPoints};});
+      data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans,yn:!!r.yn,match:!!r.match,points:r.points,maxPoints:r.maxPoints};});
     }
     if(Array.isArray(data.flagged_questions))flagged=new Set(data.flagged_questions);
     else flagged=loadFlagsForSession(sid);
@@ -628,7 +742,7 @@ async function resumeSessionFromHistory(sid){
     score=data.score||0;
     results=[];
     if(Array.isArray(data.results)){
-      data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans,yn:!!r.yn,points:r.points,maxPoints:r.maxPoints};});
+      data.results.forEach(r=>{if(typeof r.i==='number')results[r.i]={correct:r.correct,sel:r.sel,ans:r.ans,yn:!!r.yn,match:!!r.match,points:r.points,maxPoints:r.maxPoints};});
     }
     if(Array.isArray(data.flagged_questions))flagged=new Set(data.flagged_questions);
     else flagged=loadFlagsForSession(sid);

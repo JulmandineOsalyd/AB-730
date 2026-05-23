@@ -3,7 +3,8 @@
     "allow": [
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('c:/Users/julie/Downloads/AB-730/index.html','utf8'\\);const m=html.match\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\);const inline=m.filter\\(s=>!s.includes\\('src='\\)\\).map\\(s=>s.replace\\(/<\\\\/?script[^>]*>/g,''\\)\\).join\\('\\\\n'\\);try{new Function\\(inline\\);console.log\\('OK: JS parses'\\);}catch\\(e\\){console.log\\('ERR:',e.message\\);}\")"
     ]
   }
 }

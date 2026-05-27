@@ -387,6 +387,7 @@ function render(){
       </div>
       <div class="${statusCls}">${statusText}</div>
       <button class="btn-restart" onclick="restart()" style="margin-top:8px">🔄 Recommencer</button>
+      <button class="btn-review" onclick="startReviewWrong()" ${wrong?'':'disabled'} style="background:#dc2626">❌ Revoir les erreurs${wrong?` (${wrong})`:''}</button>
       <button class="btn-review" onclick="startReviewFlagged()" ${flagged.size?'':'disabled'}>🚩 Revoir les questions flaguées${flagged.size?` (${flagged.size})`:''}</button>
       <button class="history-btn" style="margin-top:10px;width:100%;padding:10px" onclick="openHistory()">📊 Voir l'historique</button>
     </div>`;
@@ -636,11 +637,12 @@ function next(){
 
 function buildPayload(status){
   const total=questions.length;
-  const pct=Math.round((score/total)*100);
+  const maxPts=totalPossiblePoints();
+  const pct=maxPts?Math.round((score/maxPts)*100):0;
   const duration=Math.round((Date.now()-startTime)/1000);
   return{
     session_id:sessionId,
-    score,total,percentage:pct,duration_seconds:duration,shuffle,status,
+    score,total,max_points:maxPts,percentage:pct,duration_seconds:duration,shuffle,status,
     current_index:cur,
     updated_at:new Date().toISOString(),
     results:results.map((r,i)=>r?{i,correct:r.correct,sel:r.sel,ans:r.ans,q_index:order[i],yn:!!r.yn,match:!!r.match,points:r.points,maxPoints:r.maxPoints}:null).filter(Boolean),
@@ -729,6 +731,23 @@ async function openHistory(){
   render();
 }
 
+async function deleteSession(sid){
+  if(!confirm('Supprimer cette session ?'))return;
+  try{
+    const{error,count}=await sb.from('quiz_sessions').delete({count:'exact'}).eq('session_id',sid);
+    if(error)throw error;
+    if(count===0){
+      // RLS bloque silencieusement — on masque localement quand même
+      console.warn('Delete: 0 rows affected (RLS?)');
+    }
+    historyData=historyData.filter(s=>s.session_id!==sid);
+    render();
+  }catch(e){
+    console.error('Delete error',e);
+    alert('Erreur lors de la suppression.');
+  }
+}
+
 function closeHistory(){
   showHistory=false;
   render();
@@ -755,15 +774,17 @@ function renderHistory(app){
       const flagCount=flags.length;
       const reviewBtn=flagCount?`<button class="history-btn" style="margin-left:8px;background:#f59e0b;color:#fff" onclick='startReviewFlagged(${JSON.stringify(flags)})' title="Revoir les questions flaguées de cette session">🚩 Revoir (${flagCount})</button>`:'';
       const flagMeta=flagCount?` · 🚩 ${flagCount}`:'';
+      const deleteBtn=s.session_id?`<button class="history-btn" style="margin-left:8px;background:#fee2e2;color:#dc2626" onclick="deleteSession('${s.session_id}')" title="Supprimer cette session">🗑</button>`:'';
       return `<div class="history-item">
         <div style="flex:1;min-width:0">
           <div class="history-date">${dateStr}${statusBadge}</div>
-          <div class="history-meta">${s.score}/${s.total} · question ${(s.current_index||0)+1} · ${dur} · ${mode}${flagMeta}</div>
+          <div class="history-meta">${s.score}/${s.max_points||s.total} · question ${(s.current_index||0)+1} · ${dur} · ${mode}${flagMeta}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
           <div class="history-score ${cls}">${pct}%</div>
           ${resumeBtn}
           ${reviewBtn}
+          ${deleteBtn}
         </div>
       </div>`;
     }).join('')+'</div>';
@@ -805,6 +826,17 @@ function restart(){
   cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
   sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
   flagged=new Set();persistFlags();
+  render();
+}
+
+function startReviewWrong(){
+  const list=results.map((r,i)=>r&&!r.correct?order[i]:null).filter(i=>typeof i==='number');
+  if(!list.length){alert('Aucune erreur à revoir.');return;}
+  order=list;
+  cur=0;sel=[];submitted=false;score=0;done=false;results=[];saveStatus='';startTime=Date.now();
+  sessionId=newSessionId();localStorage.setItem(SESSION_KEY,sessionId);
+  flagged=new Set();persistFlags();
+  showHistory=false;
   render();
 }
 

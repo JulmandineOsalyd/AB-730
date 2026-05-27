@@ -4,7 +4,8 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git push *)",
-      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('c:/Users/julie/Downloads/AB-730/index.html','utf8'\\);const m=html.match\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\);const inline=m.filter\\(s=>!s.includes\\('src='\\)\\).map\\(s=>s.replace\\(/<\\\\/?script[^>]*>/g,''\\)\\).join\\('\\\\n'\\);try{new Function\\(inline\\);console.log\\('OK: JS parses'\\);}catch\\(e\\){console.log\\('ERR:',e.message\\);}\")"
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('c:/Users/julie/Downloads/AB-730/index.html','utf8'\\);const m=html.match\\(/<script>\\([\\\\s\\\\S]*?\\)<\\\\/script>/g\\);const inline=m.filter\\(s=>!s.includes\\('src='\\)\\).map\\(s=>s.replace\\(/<\\\\/?script[^>]*>/g,''\\)\\).join\\('\\\\n'\\);try{new Function\\(inline\\);console.log\\('OK: JS parses'\\);}catch\\(e\\){console.log\\('ERR:',e.message\\);}\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);const html=fs.readFileSync\\('/c/Users/julie/Downloads/AB-730/index.html','utf8'\\);const m=html.match\\(/const questions=\\(\\\\[[\\\\s\\\\S]*?\\\\]\\);/\\);if\\(!m\\){console.log\\('Pattern not found'\\);process.exit\\(1\\);}const arr=eval\\(m[1]\\);console.log\\('Total questions:',arr.length\\);console.log\\('First Q:',arr[0].q.slice\\(0,80\\)\\);console.log\\('Last Q:',arr[arr.length-1].q.slice\\(0,80\\)\\);\")"
     ]
   }
 }
